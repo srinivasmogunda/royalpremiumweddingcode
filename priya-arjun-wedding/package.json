@@ -1,0 +1,11 @@
+{
+  "name": "priya-arjun-wedding",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^9.0.0"
+  }
+}

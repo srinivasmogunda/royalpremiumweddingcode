@@ -139,7 +139,7 @@ function renderEntry(c){
     <div class="rp-entry__content">
       <p class="rp-entry__title rp-font-label">The Wedding Celebration</p>
       <img class="rp-entry__mandala" src="${asset('mandala-bloom.svg')}" alt="">
-      <h1 class="rp-entry__names rp-font-script">${esc(c.partnerOne)} <span class="rp-entry__amp">&amp;</span> ${esc(c.partnerTwo)}</h1>
+      <h1 class="rp-entry__names rp-font-script"><span class="rp-entry__name">${esc(c.partnerOne)}</span><span class="rp-entry__amp">&amp;</span><span class="rp-entry__name">${esc(c.partnerTwo)}</span></h1>
       <img class="rp-entry__ornament" src="${asset('ornate-divider.svg')}" alt="">
       <button class="rp-entry__cta rp-font-label" id="open-invitation">Open Invitation</button>
     </div>
@@ -162,40 +162,57 @@ function nameFitClass(first,second){
 // letter. Leave this much room on each side.
 const NAME_SWASH_ROOM=18;
 
+// How wide the names actually are. Measured from the children, never from the
+// wrapper: these wrappers are block-level flex containers, so their own
+// scrollWidth is just the parent's width and would never look like it fits.
+// offsetWidth rather than getBoundingClientRect, because the entry names are
+// mid-tween when this first runs and a transform would skew the reading.
+function nameContentWidth(el,parts,isStacked){
+  const widths=parts.map(p=>p.offsetWidth);
+  if(isStacked) return Math.max(...widths);
+  const gap=parseFloat(getComputedStyle(el).columnGap)||0;
+  return widths.reduce((a,b)=>a+b,0)+gap*(parts.length-1);
+}
+
+// Shrink `el` until its names clear the container, returning whether they do.
+function shrinkNamesToFit(el,container,isStacked,floor){
+  const parts=[...el.children];
+  if(!parts.length) return true;
+  const room=container.clientWidth-NAME_SWASH_ROOM*2;
+  const width=()=>nameContentWidth(el,parts,isStacked());
+  let scale=1;
+  el.style.removeProperty('--rp-name-scale');
+  while(scale>floor && width()>room){
+    scale-=0.02;
+    el.style.setProperty('--rp-name-scale',scale.toFixed(2));
+  }
+  return width()<=room;
+}
+
 function fitNames(){
   const hero=document.querySelector('.rp-hero__names');
   const heroContent=document.querySelector('.rp-hero__content');
   if(hero && heroContent){
-    const room=()=>heroContent.clientWidth-NAME_SWASH_ROOM*2;
-    const widest=()=>Math.max(hero.scrollWidth,...[...hero.children].map(c=>c.scrollWidth));
     // Shrink smoothly rather than stepping between preset sizes, so the names
     // stay as large as they can while still clearing the edges. Only stack
     // them once side-by-side would have to get genuinely small.
-    const shrinkToFit=(floor)=>{
-      let scale=1;
-      hero.style.removeProperty('--rp-name-scale');
-      while(scale>floor && widest()>room()){
-        scale-=0.02;
-        hero.style.setProperty('--rp-name-scale',scale.toFixed(2));
-      }
-      return widest()<=room();
-    };
+    const stacked=()=>hero.classList.contains('rp-hero__names--col');
     hero.className='rp-hero__names';
-    if(!shrinkToFit(0.72)){
+    if(!shrinkNamesToFit(hero,heroContent,stacked,0.72)){
       hero.className='rp-hero__names rp-hero__names--col';
-      shrinkToFit(0.5);
+      shrinkNamesToFit(hero,heroContent,stacked,0.5);
     }
   }
-  // The entry and footer render the pair as one line; scale those to fit too.
-  for(const sel of ['.rp-entry__names','.rp-footer__names']){
+  // Entry and footer: keep the pair on one line while it fits, otherwise give
+  // each name its own line rather than letting the text wrap mid-name.
+  for(const [sel,modifier] of [['.rp-entry__names','rp-entry__names--stacked'],['.rp-footer__names','rp-footer__names--stacked']]){
     const el=document.querySelector(sel);
     if(!el || !el.parentElement) continue;
-    el.style.removeProperty('--rp-name-scale');
-    let scale=1;
-    const room=el.parentElement.clientWidth-NAME_SWASH_ROOM*2;
-    while(scale>0.5 && el.scrollWidth>room){
-      scale-=0.04;
-      el.style.setProperty('--rp-name-scale',scale.toFixed(2));
+    const stacked=()=>el.classList.contains(modifier);
+    el.classList.remove(modifier);
+    if(!shrinkNamesToFit(el,el.parentElement,stacked,0.82)){
+      el.classList.add(modifier);
+      shrinkNamesToFit(el,el.parentElement,stacked,0.5);
     }
   }
 }
@@ -402,7 +419,7 @@ function renderShare(c){
 }
 
 function renderFooter(c){
-  return `<footer class="rp-footer rp-section" id="footer"><img src="${esc(c.footerBackground||c.coverPhoto||remoteAsset('ext-couple-hero.jpg'))}" class="rp-footer__photo" alt="" loading="lazy" decoding="async"><div class="rp-footer__content rp-container"><img src="${asset('ornate-divider.svg')}" class="rp-footer__divider" alt=""><p class="rp-footer__label rp-font-label">The Beginning of Forever</p><div class="rp-footer__names rp-font-script">${esc(c.partnerOne)}<span class="rp-footer__amp">&amp;</span>${esc(c.partnerTwo)}</div><div class="rp-footer__date rp-font-label">${esc(fmtDate(c.weddingDate,c.displayDate))} · ${esc(c.weddingTime||'')}</div><p class="rp-footer__hash rp-font-serif">${esc(c.hashtag||'')}</p><p class="rp-footer__line rp-font-serif">With love, laughter, and blessings.</p></div></footer>`;
+  return `<footer class="rp-footer rp-section" id="footer"><img src="${esc(c.footerBackground||c.coverPhoto||remoteAsset('ext-couple-hero.jpg'))}" class="rp-footer__photo" alt="" loading="lazy" decoding="async"><div class="rp-footer__content rp-container"><img src="${asset('ornate-divider.svg')}" class="rp-footer__divider" alt=""><p class="rp-footer__label rp-font-label">The Beginning of Forever</p><div class="rp-footer__names rp-font-script"><span class="rp-footer__name">${esc(c.partnerOne)}</span><span class="rp-footer__amp">&amp;</span><span class="rp-footer__name">${esc(c.partnerTwo)}</span></div><div class="rp-footer__date rp-font-label">${esc(fmtDate(c.weddingDate,c.displayDate))} · ${esc(c.weddingTime||'')}</div><p class="rp-footer__hash rp-font-serif">${esc(c.hashtag||'')}</p><p class="rp-footer__line rp-font-serif">With love, laughter, and blessings.</p></div></footer>`;
 }
 
 // Phones have far less GPU headroom than the desktop this was tuned on, and
@@ -695,6 +712,46 @@ function initScrollAnimations(){
   ScrollTrigger.refresh();
 }
 
+function invitationUrl(){
+  return `${window.location.origin}${window.location.pathname}`;
+}
+
+// The whole message must be encoded. The couple's names contain "&", and an
+// unencoded one ends the query string — which is why every shared RSVP used
+// to arrive truncated at the first name.
+function openWhatsApp(text){
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,'_blank','noopener,noreferrer');
+}
+
+// This button is the fallback the submit handler points guests to when the
+// RSVP server is unreachable, so it has to carry the whole reply, not just a
+// name.
+function rsvpWhatsAppMessage(){
+  const c=state.config;
+  const form=document.querySelector('#rsvp-form');
+  const field=(name)=>String(form?.elements?.[name]?.value||'').trim();
+  const guestName=field('name');
+  const adults=Number(field('adults')||1);
+  const children=Number(field('children')||0);
+  const attending=form?.dataset.attendance!=='no';
+  const events=Array.from(document.querySelectorAll('.rp-rsvp__event-check:checked'))
+    .map(x=>c.events?.[Number(x.value)]?.name).filter(Boolean);
+  const note=field('message');
+
+  const lines=[`RSVP for ${c.partnerOne} & ${c.partnerTwo}'s wedding`,''];
+  lines.push(`Name: ${guestName||'(not given)'}`);
+  lines.push(attending?'Attending: Yes':'Attending: No');
+  if(attending){
+    const party=[`${adults} adult${adults===1?'':'s'}`];
+    if(children>0) party.push(`${children} child${children===1?'':'ren'}`);
+    lines.push(`Guests: ${party.join(' + ')}`);
+    if(events.length) lines.push(`Events: ${events.join(', ')}`);
+  }
+  if(note) lines.push('',note);
+  lines.push('',invitationUrl());
+  return lines.join('\n');
+}
+
 function initInteractions(){
   document.querySelector('#open-invitation')?.addEventListener('click',handleOpen);
 
@@ -747,15 +804,12 @@ function initInteractions(){
   });
 
   document.querySelector('#rsvp-whatsapp-btn')?.addEventListener('click',()=>{
-    const c=state.config;
-    const message=`RSVP for ${c.partnerOne} & ${c.partnerTwo} wedding%0AName: ${encodeURIComponent(document.querySelector('#rsvp-form [name="name"]')?.value||'')}`;
-    window.open(`https://wa.me/?text=${message}`,'_blank','noopener,noreferrer');
+    openWhatsApp(rsvpWhatsAppMessage());
   });
 
   document.querySelector('#share-whatsapp-btn')?.addEventListener('click',()=>{
     const c=state.config;
-    const text=`You're invited to ${c.partnerOne} & ${c.partnerTwo}'s wedding!\n\n${window.location.origin}${window.location.pathname}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,'_blank','noopener,noreferrer');
+    openWhatsApp(`You're invited to ${c.partnerOne} & ${c.partnerTwo}'s wedding!\n\n${invitationUrl()}`);
   });
 
   document.querySelector('#calendar-btn')?.addEventListener('click',()=>{
