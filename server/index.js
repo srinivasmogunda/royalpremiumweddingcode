@@ -25,6 +25,20 @@ function readJson(file,fallback){try{return JSON.parse(fs.readFileSync(file,'utf
 function writeJson(file,data){fs.writeFileSync(file,JSON.stringify(data,null,2))}
 function body(req){return new Promise((resolve,reject)=>{const chunks=[];req.on('data',c=>chunks.push(c));req.on('end',()=>resolve(Buffer.concat(chunks)));req.on('error',reject)})}
 function safeName(name){return String(name||'upload').replace(/[^a-zA-Z0-9._-]+/g,'-').slice(-120)||'upload'}
+// Same record shape as netlify/functions/rsvp.mjs, so the guest list reads the
+// same whether the site runs here or on Netlify.
+function clampCount(value,min,max){const n=Math.floor(Number(value));return Number.isFinite(n)?Math.max(min,Math.min(max,n)):min}
+function normalizeRsvp(data){
+  const adults=clampCount(data.adults??1,1,8), children=clampCount(data.children??0,0,5);
+  return {
+    name:String(data.name||'').trim().slice(0,160),
+    adults, children, guests:adults+children,
+    events:Array.isArray(data.events)?data.events.map(e=>String(e).trim().slice(0,120)).filter(Boolean).slice(0,20):[],
+    message:String(data.message||'').trim().slice(0,1000),
+    attendance:data.attendance==='no'?'no':'yes',
+    createdAt:new Date().toISOString(),
+  };
+}
 function hashPassword(password,salt=crypto.randomBytes(16).toString('hex')){const hash=crypto.pbkdf2Sync(password,salt,120000,32,'sha256').toString('hex');return {salt,hash}}
 function passwordOk(password){const auth=readJson(AUTH_FILE,null);if(!auth)return false;const trial=hashPassword(password,auth.salt).hash;return crypto.timingSafeEqual(Buffer.from(trial,'hex'),Buffer.from(auth.hash,'hex'))}
 function authConfigured(){const auth=readJson(AUTH_FILE,null);return !!(auth&&typeof auth.hash==='string'&&auth.hash.length&&typeof auth.salt==='string'&&auth.salt.length)}
@@ -38,7 +52,11 @@ function serveFile(req,res,pathname){
   const file=path.join(ROOT,clean);
   if(!file.startsWith(ROOT) || !fs.existsSync(file) || !fs.statSync(file).isFile()){res.writeHead(404);res.end('Not found');return}
   const ext=path.extname(file).toLowerCase();
-  res.writeHead(200,{'content-type':mime[ext]||'application/octet-stream','cache-control':ext==='.html'?'no-cache':'public,max-age=31536000,immutable'});
+  // Only content-addressed files (uploads keep a timestamp in the name, fonts
+  // a build hash) may be cached forever. The app's own code and data must not
+  // be, or an edit in the admin never reaches a browser that has been here.
+  const immutable=clean.startsWith('uploads/')||clean.startsWith('assets/fonts/');
+  res.writeHead(200,{'content-type':mime[ext]||'application/octet-stream','cache-control':immutable?'public,max-age=31536000,immutable':'no-cache'});
   fs.createReadStream(file).pipe(res);
 }
 
@@ -71,12 +89,22 @@ const server=http.createServer(async(req,res)=>{
     if(u.pathname==='/api/admin/upload' && req.method==='PUT'){
       if(!isAuthed(req))return json(res,401,{error:'Invalid admin password.'});
       const data=await body(req); const name=safeName(u.searchParams.get('name')); const stamp=Date.now();
-      const file=path.join(UPLOADS,`${stamp}-${name}`); fs.writeFileSync(file,data);
-      return json(res,200,{url:`/uploads/${path.basename(file)}`});
+      try{
+        // Recreate the folder in case it was removed while the server was up.
+        fs.mkdirSync(UPLOADS,{recursive:true});
+        const file=path.join(UPLOADS,`${stamp}-${name}`); fs.writeFileSync(file,data);
+        return json(res,200,{url:`/uploads/${path.basename(file)}`});
+      }catch(error){
+        console.error(error);
+        // Say why, so the editor can show something better than "Server error".
+        return json(res,500,{error:`Could not save the upload: ${error.message}`});
+      }
     }
     if(u.pathname==='/api/rsvp' && req.method==='POST'){
       const data=JSON.parse((await body(req)).toString('utf8')||'{}');
-      const list=readJson(RSVP_FILE,[]);list.push({...data,createdAt:new Date().toISOString()});writeJson(RSVP_FILE,list);return json(res,200,{ok:true});
+      const reply=normalizeRsvp(data);
+      if(!reply.name)return json(res,400,{error:'Name is required.'});
+      const list=readJson(RSVP_FILE,[]);list.push(reply);writeJson(RSVP_FILE,list);return json(res,200,{ok:true});
     }
     return serveFile(req,res,u.pathname);
   }catch(error){console.error(error);json(res,500,{error:'Server error.'})}
