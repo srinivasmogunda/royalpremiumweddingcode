@@ -146,6 +146,14 @@ function renderEntry(c){
   </div>`;
 }
 
+function nameFitClass(first,second){
+  const longest=Math.max(first.length,second.length);
+  const combined=first.length+second.length;
+  if(longest>12 || combined>22) return ' rp-hero__names--col';
+  if(longest>8 || combined>15) return ' rp-hero__names--long';
+  return '';
+}
+
 function renderHero(c){
   const first=c.partnerOne||'Sidharth', second=c.partnerTwo||'Kiara';
   const chars=(s,p)=>[...s].map((ch,i)=>`<span class="rp-hero__char" data-char="${p}-${i}">${ch===' ' ? '&nbsp;' : esc(ch)}</span>`).join('');
@@ -158,7 +166,7 @@ function renderHero(c){
       <img class="rp-hero__ganesha" src="${remoteAsset('ganesha-header.png')}" alt="">
       <div class="rp-hero__line"></div>
       <p class="rp-hero__label rp-font-label">Wedding Celebration</p>
-      <div class="rp-hero__names">
+      <div class="rp-hero__names${nameFitClass(first,second)}">
         <h1 class="rp-hero__name rp-font-script">${chars(first,'g')}</h1>
         <span class="rp-hero__amp">&amp;</span>
         <h1 class="rp-hero__name rp-font-script">${chars(second,'b')}</h1>
@@ -348,7 +356,7 @@ function renderShare(c){
 }
 
 function renderFooter(c){
-  return `<footer class="rp-footer rp-section" id="footer"><img src="${esc(c.footerBackground||c.coverPhoto||remoteAsset('ext-couple-hero.jpg'))}" class="rp-footer__photo" alt=""><div class="rp-footer__content rp-container"><img src="${asset('ornate-divider.svg')}" class="rp-footer__divider" alt=""><p class="rp-footer__label rp-font-label">The Beginning of Forever</p><div class="rp-footer__names rp-font-script">${esc(c.partnerOne)} &amp; ${esc(c.partnerTwo)}</div><div class="rp-footer__date rp-font-label">${esc(fmtDate(c.weddingDate,c.displayDate))} · ${esc(c.weddingTime||'')}</div><p class="rp-footer__hash rp-font-serif">${esc(c.hashtag||'')}</p><p class="rp-footer__line rp-font-serif">With love, laughter, and blessings.</p></div></footer>`;
+  return `<footer class="rp-footer rp-section" id="footer"><img src="${esc(c.footerBackground||c.coverPhoto||remoteAsset('ext-couple-hero.jpg'))}" class="rp-footer__photo" alt=""><div class="rp-footer__content rp-container"><img src="${asset('ornate-divider.svg')}" class="rp-footer__divider" alt=""><p class="rp-footer__label rp-font-label">The Beginning of Forever</p><div class="rp-footer__names rp-font-script">${esc(c.partnerOne)}<span class="rp-footer__amp">&amp;</span>${esc(c.partnerTwo)}</div><div class="rp-footer__date rp-font-label">${esc(fmtDate(c.weddingDate,c.displayDate))} · ${esc(c.weddingTime||'')}</div><p class="rp-footer__hash rp-font-serif">${esc(c.hashtag||'')}</p><p class="rp-footer__line rp-font-serif">With love, laughter, and blessings.</p></div></footer>`;
 }
 
 function firePetalBurst(){
@@ -374,14 +382,18 @@ function firePetalBurst(){
 
 function animateEntry(){
   const entry=document.querySelector('#rp-entry');
-  const tl=gsap.timeline({defaults:{ease:'power2.out'}});
+  const tl=gsap.timeline({defaults:{ease:'power2.out'},onComplete(){
+    // Start the idle sway only once the reveal finished, so the two tweens
+    // never fight over the mandala's rotation.
+    state.mandalaIdle=gsap.to('.rp-entry__mandala',{rotate:4,duration:6,ease:'sine.inOut',yoyo:true,repeat:-1});
+  }});
   tl.from('.rp-entry__glow',{scale:.6,opacity:0,duration:1.2})
     .from('.rp-entry__mandala',{scale:.7,opacity:0,rotate:-12,duration:1.1},'-=.7')
-    .from('.rp-entry__title',{y:14,opacity:0,duration:.65},'-.4')
-    .from('.rp-entry__names',{y:24,opacity:0,scale:.95,duration:.85},'-.3')
-    .from('.rp-entry__ornament',{scaleX:0,opacity:0,duration:.7},'-.3')
-    .from('.rp-entry__cta',{y:18,opacity:0,duration:.65},'-.25');
-  gsap.to('.rp-entry__mandala',{rotate:4,duration:6,ease:'sine.inOut',yoyo:true,repeat:-1});
+    .from('.rp-entry__title',{y:14,opacity:0,duration:.65},'-=.4')
+    .from('.rp-entry__names',{y:24,opacity:0,scale:.95,duration:.85},'-=.3')
+    .from('.rp-entry__ornament',{scaleX:0,opacity:0,duration:.7},'-=.3')
+    .from('.rp-entry__cta',{y:18,opacity:0,duration:.65},'-=.25');
+  state.entryTimeline=tl;
   document.body.style.overflow='hidden';
 }
 
@@ -451,26 +463,43 @@ function fireGoldenBurst(){
   setTimeout(()=>confetti({particleCount:40,angle:120,spread:55,startVelocity:35,origin:{x:.75,y:.55},colors:[gold,soft,cream],shapes:['circle'],gravity:.7,scalar:.9,ticks:100,zIndex:200}),150);
 }
 
+const GROOM_CHARS='.rp-hero__name:first-child .rp-hero__char';
+const BRIDE_CHARS='.rp-hero__name:last-child .rp-hero__char';
+
+// One definition of the hero reveal, used twice: once to park every element in
+// its starting state before the main screen is uncovered, once to play it.
+// Keeping them together is what stops the names from showing fully formed and
+// then jumping back to animate a second time.
+const HERO_INTRO=[
+  {at:.15, target:'.rp-hero__line',     from:{scaleX:0},                          to:{scaleX:1,duration:.8,ease:'power2.inOut'}},
+  {at:.35, target:'.rp-hero__ganesha',  from:{scale:.65,opacity:0},               to:{scale:1,opacity:1,duration:.65,ease:'back.out(1.7)'}},
+  {at:.55, target:'.rp-hero__label',    from:{y:14,opacity:0},                    to:{y:0,opacity:1,duration:.6}},
+  {at:.75, target:GROOM_CHARS,          from:{x:-72,y:20,opacity:0,rotateX:-40},  to:{x:0,y:0,opacity:1,rotateX:0,stagger:.055,duration:.7,ease:'back.out(1.7)'}},
+  {at:1.45,target:BRIDE_CHARS,          from:{x:72,y:20,opacity:0,rotateX:-40},   to:{x:0,y:0,opacity:1,rotateX:0,stagger:.055,duration:.7,ease:'back.out(1.7)'}},
+  {at:1.95,target:'.rp-hero__amp',      from:{scale:0,opacity:0},                 to:{scale:1,opacity:1,duration:.55,ease:'back.out(2)'}},
+  {at:2.15,target:'.rp-hero__chip',     from:{scale:.8,opacity:0},                to:{scale:1,opacity:1,duration:.55,ease:'back.out(1.6)'}},
+  {at:2.35,target:'.rp-hero__welcome',  from:{y:16,opacity:0},                    to:{y:0,opacity:1,duration:.6}},
+  {at:2.55,target:'.rp-hero__ornament', from:{scaleX:0,opacity:0},                to:{scaleX:1,opacity:1,duration:.7,ease:'power2.inOut'}},
+  {at:2.75,target:'.rp-hero__scroll',   from:{y:14,opacity:0},                    to:{y:0,opacity:1,duration:.55}},
+];
+
+function primeMainIntro(){
+  gsap.set('.rp-hero__photo',{scale:1.15});
+  HERO_INTRO.forEach(step=>gsap.set(step.target,step.from));
+}
+
 function playMainIntro(){
   const main=document.querySelector('#rp-main');
   main.classList.add('is-visible');
-  const tl=gsap.timeline({defaults:{ease:'power3.out'}});
-  const groomChars='.rp-hero__name:first-child .rp-hero__char';
-  const brideChars='.rp-hero__name:last-child .rp-hero__char';
-  gsap.set('.rp-hero__photo',{scale:1.15});
-  tl.to('.rp-hero__photo',{scale:1,duration:2,ease:'power2.out'},0)
-    .from('.rp-hero__line',{scaleX:0,duration:.8,ease:'power2.inOut'},.15)
-    .from('.rp-hero__ganesha',{scale:.65,opacity:0,duration:.65,ease:'back.out(1.7)'},.35)
-    .from('.rp-hero__label',{y:14,opacity:0,duration:.6},.55)
-    .from(groomChars,{x:-72,y:20,opacity:0,rotateX:-40,stagger:.055,duration:.7,ease:'back.out(1.7)'},.75)
-    .from(brideChars,{x:72,y:20,opacity:0,rotateX:-40,stagger:.055,duration:.7,ease:'back.out(1.7)'},1.45)
-    .from('.rp-hero__amp',{scale:0,opacity:0,duration:.55,ease:'back.out(2)'},1.95)
-    .from('.rp-hero__chip',{scale:.8,opacity:0,duration:.55,ease:'back.out(1.6)'},2.15)
-    .from('.rp-hero__welcome',{y:16,opacity:0,duration:.6},2.35)
-    .from('.rp-hero__ornament',{scaleX:0,opacity:0,duration:.7,ease:'power2.inOut'},2.55)
-    .from('.rp-hero__scroll',{y:14,opacity:0,duration:.55},2.75);
+  primeMainIntro(); // harmless if handleOpen already primed; required when it did not
+  const tl=gsap.timeline({defaults:{ease:'power3.out'},onComplete(){
+    // Only hand the hero photo to the scroll parallax once the opening zoom has
+    // finished, so the two never animate `scale` at the same time.
+    gsap.to('.rp-hero__photo',{yPercent:20,scale:1.08,scrollTrigger:{trigger:'#hero',start:'top top',end:'bottom top',scrub:1.2},ease:'none'});
+  }});
+  tl.to('.rp-hero__photo',{scale:1,duration:2,ease:'power2.out'},0);
+  HERO_INTRO.forEach(step=>tl.to(step.target,step.to,step.at));
   gsap.to('.rp-hero__mandala-bg',{rotate:30,scrollTrigger:{trigger:'#hero',start:'top top',end:'bottom top',scrub:2},ease:'none'});
-  gsap.to('.rp-hero__photo',{yPercent:20,scale:1.08,scrollTrigger:{trigger:'#hero',start:'top top',end:'bottom top',scrub:1.2},ease:'none'});
   gsap.to('.rp-hero__content',{y:-60,opacity:.3,scrollTrigger:{trigger:'#hero',start:'30% top',end:'bottom top',scrub:1},ease:'none'});
   ScrollTrigger.refresh();
   if(!state.scrollReady){state.scrollReady=true; initScrollAnimations();}
@@ -480,16 +509,23 @@ function handleOpen(){
   if(state.opened)return; state.opened=true;
   const entry=document.querySelector('#rp-entry');
   const main=document.querySelector('#rp-main');
+  // The reveal timeline and the idle sway both own the mandala's rotation;
+  // stop them before the exit tween takes over.
+  state.entryTimeline?.progress(1);
+  state.mandalaIdle?.kill();
+  // The main screen is uncovered part-way through this timeline, so the hero
+  // has to already be in its pre-animation state by then.
+  primeMainIntro();
   const tl=gsap.timeline({onComplete(){entry.style.display='none';document.body.style.overflow='';playMainIntro();state.audio?.play().catch(()=>{});}});
   tl.to('.rp-entry__cta',{scale:.9,duration:.12,ease:'power2.in'})
     .to('.rp-entry__cta',{scale:1.15,opacity:0,duration:.3,ease:'power2.out'})
-    .to('.rp-entry__title,.rp-entry__ornament',{y:-40,opacity:0,stagger:.04,duration:.4,ease:'power3.in'},'-.15')
+    .to('.rp-entry__title,.rp-entry__ornament',{y:-40,opacity:0,stagger:.04,duration:.4,ease:'power3.in'},'-=.15')
     .to('.rp-entry__names',{scale:1.12,opacity:0,duration:.5,ease:'power2.in'},'<.1')
     .set(main,{visibility:'visible'})
-    .to('.rp-entry__mandala',{scale:6,rotate:180,opacity:0,duration:1.2,ease:'power2.in'},'-.35')
+    .to('.rp-entry__mandala',{scale:6,rotate:180,opacity:0,duration:1.2,ease:'power2.in'},'-=.35')
     .to('.rp-entry__glow',{scale:8,opacity:1,duration:.8,ease:'power2.in'},'-=1')
     .call(()=>{startGlobalFlowerRain();firePetalBurst();fireGoldenBurst();},[],'-=.55')
-    .to('.rp-entry__flash',{opacity:1,duration:.35,ease:'power2.in'},'-.35')
+    .to('.rp-entry__flash',{opacity:1,duration:.35,ease:'power2.in'},'-=.35')
     .to(entry,{opacity:0,duration:.5,ease:'power2.out'});
 }
 
@@ -577,7 +613,7 @@ function initScrollAnimations(){
   // Venue — event chips animate independently, then the map card slides up.
   gsap.from('.rp-venue__title,.rp-venue__subtitle',{scrollTrigger:{trigger:'#venue',start:'top 85%',toggleActions:'play none none none'},y:28,opacity:0,duration:.8,stagger:.12,ease:'power3.out'});
   document.querySelectorAll('.rp-venue__event-card').forEach((card,i)=>gsap.from(card,{scrollTrigger:{trigger:card,start:'top 90%',toggleActions:'play none none none'},scale:.85,y:18,opacity:0,delay:i*.08,duration:.7,ease:'back.out(1.4)'}));
-  gsap.from('.rp-venue__chip',{scrollTrigger:{trigger:'#venue',start:'top 90%',toggleActions:'play none none none'},scale:.8,opacity:0,stagger:.1,duration:.6,ease:'back.out(1.4)'});
+  gsap.from('.rp-venue__chips .rp-chip',{scrollTrigger:{trigger:'#venue',start:'top 90%',toggleActions:'play none none none'},scale:.8,opacity:0,stagger:.1,duration:.6,ease:'back.out(1.4)'});
   gsap.from('.rp-venue__card',{scrollTrigger:{trigger:'.rp-venue__card',start:'top 92%',toggleActions:'play none none none'},y:50,opacity:0,scale:.96,duration:1,ease:'power3.out',delay:.12});
   gsap.from('.rp-venue__map-wrap',{scrollTrigger:{trigger:'.rp-venue__map-wrap',start:'top 92%',toggleActions:'play none none none'},clipPath:'inset(100% 0 0 0)',duration:1,ease:'power2.inOut'});
   gsap.from('.rp-venue__notes-list li',{scrollTrigger:{trigger:'.rp-venue__notes-list',start:'top 92%',toggleActions:'play none none none'},x:-20,opacity:0,stagger:.12,duration:.6,ease:'power2.out'});
@@ -686,8 +722,36 @@ function initInteractions(){
   });
 }
 
+// Photos decide how tall every section is, so ScrollTrigger's start/end
+// positions are wrong until they have loaded. Refresh once each one settles,
+// and drop any image whose URL is dead so it cannot leave an empty frame.
+function watchPhotos(){
+  let timer=null;
+  const refresh=()=>{ clearTimeout(timer); timer=setTimeout(()=>ScrollTrigger.refresh(),120); };
+  document.querySelectorAll('.royal-premium img').forEach(img=>{
+    img.addEventListener('error',()=>{
+      img.dataset.failed='true';
+      img.style.display='none';
+      console.warn('Photo failed to load:',img.getAttribute('src'));
+      refresh();
+    },{once:true});
+    if(!img.complete) img.addEventListener('load',refresh,{once:true});
+  });
+  // Give each gallery tile its photo's own shape, so the masonry column sizes
+  // to the picture instead of cropping the picture to fit the tile.
+  document.querySelectorAll('.rp-gallery__image').forEach(img=>{
+    const fit=()=>{
+      if(!img.naturalWidth || !img.naturalHeight) return;
+      img.style.aspectRatio=`${img.naturalWidth} / ${img.naturalHeight}`;
+      refresh();
+    };
+    if(img.complete) fit(); else img.addEventListener('load',fit,{once:true});
+  });
+  window.addEventListener('load',refresh,{once:true});
+}
+
 async function start(){
-  state.config=await loadConfig(); renderShell(); initMusic(state.config); animateEntry(); setInterval(countdown,1000); countdown();
+  state.config=await loadConfig(); renderShell(); watchPhotos(); initMusic(state.config); animateEntry(); setInterval(countdown,1000); countdown();
   initInteractions();
   // keep root ready for browser resize
   window.addEventListener('resize',()=>ScrollTrigger.refresh());
