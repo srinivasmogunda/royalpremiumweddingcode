@@ -1,0 +1,21 @@
+<svg width="1024" height="120" viewBox="0 0 1024 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="lotusGold" x1="0" y1="60" x2="1024" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D39A44" stop-opacity="0"/>
+      <stop offset="0.2" stop-color="#E8C171"/>
+      <stop offset="0.5" stop-color="#FFE3AB"/>
+      <stop offset="0.8" stop-color="#E8C171"/>
+      <stop offset="1" stop-color="#D39A44" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <path d="M40 60H414" stroke="url(#lotusGold)" stroke-width="2"/>
+  <path d="M610 60H984" stroke="url(#lotusGold)" stroke-width="2"/>
+  <g transform="translate(512 60)">
+    <path d="M0 -30C14 -14 18 0 0 24C-18 0 -14 -14 0 -30Z" fill="#F6D58D"/>
+    <path d="M-28 -22C-10 -12 -6 4 -22 24C-40 8 -40 -8 -28 -22Z" fill="#E8B764"/>
+    <path d="M28 -22C40 -8 40 8 22 24C6 4 10 -12 28 -22Z" fill="#E8B764"/>
+    <path d="M-50 -6C-30 -4 -20 10 -30 30C-54 24 -62 8 -50 -6Z" fill="#D18A39"/>
+    <path d="M50 -6C62 8 54 24 30 30C20 10 30 -4 50 -6Z" fill="#D18A39"/>
+    <circle cx="0" cy="30" r="6" fill="#F7E0AC"/>
+  </g>
+</svg>

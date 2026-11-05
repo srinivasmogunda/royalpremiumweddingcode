@@ -1,0 +1,146 @@
+html,body{margin:0;padding:0;background:#12091f;color:#f7ecd5;overflow-x:hidden}body{font-family:Manrope,system-ui,sans-serif}.royal-premium{--rp-font-cinzel:'Cinzel';--rp-font-cormorant:'Cormorant Garamond';--rp-font-great-vibes:'Great Vibes';--rp-font-manrope:'Manrope';--rp-font-devanagari:'Noto Serif Devanagari';min-height:100vh}.rp-main{position:relative;z-index:1;visibility:hidden}.rp-main.is-visible{visibility:visible}.rp-entry__photo{filter:saturate(.92) contrast(1.02)}.rp-lightbox{position:fixed;inset:0;z-index:100;background:rgba(8,4,14,.96);display:grid;place-items:center;padding:2rem}.rp-lightbox img{max-width:94vw;max-height:90vh;object-fit:contain}.rp-lightbox button{position:absolute;top:1rem;right:1rem;width:42px;height:42px;border-radius:50%;border:1px solid rgba(245,217,157,.4);background:rgba(18,9,31,.88);color:#fff4da;font-size:1.8rem;cursor:pointer}.rp-events__ritual-desc{color:rgba(247,236,213,.78);line-height:1.45}.rp-rsvp__status{min-height:1.2em;margin:.4rem 0 0;color:var(--rp-gold-soft)}.rp-live{background:linear-gradient(180deg,rgba(18,9,31,.97),rgba(25,10,33,.98));}.rp-live__card{max-width:620px;margin:0 auto;border:1px solid var(--rp-border);border-radius:var(--rp-radius-lg);padding:2rem 1.2rem;text-align:center;background:linear-gradient(150deg,rgba(78,30,70,.72),rgba(26,13,40,.94));box-shadow:var(--rp-shadow-strong)}.rp-live__badge{color:var(--rp-gold-soft)}.rp-live__dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#d84a54;box-shadow:0 0 0 5px rgba(216,74,84,.12);margin-right:.45rem}.rp-live__divider{width:min(90%,300px);margin:1rem auto;display:block}.rp-live__title{margin:0;font-size:clamp(1.9rem,7.5vw,2.8rem)}.rp-live__subtitle{max-width:42ch;margin:.6rem auto 1.1rem}.rp-live__btn{display:inline-flex;text-decoration:none;color:var(--rp-cream);padding:.82rem 1.4rem;border-radius:var(--rp-pill);border:1px solid var(--rp-border);background:linear-gradient(120deg,rgba(84,32,65,.96),rgba(173,106,46,.92))}.rp-live__note{margin:1rem auto 0;opacity:.72;font-size:.95rem}.rp-video__player{border-radius:20px;overflow:hidden;border:1px solid var(--rp-border);box-shadow:var(--rp-shadow-strong);background:#0e0818;aspect-ratio:16/9}.rp-video__iframe{width:100%;height:100%;border:0;display:block}.rp-footer{min-height:52vh;display:grid;align-items:end;overflow:hidden}.rp-footer__photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.2;z-index:-3}.rp-footer__content{text-align:center;padding-bottom:3rem}.rp-footer__divider{width:min(90%,440px);display:block;margin:0 auto 1rem}.rp-footer__label{color:var(--rp-gold-soft)}.rp-footer__names{font-size:clamp(3rem,12vw,5rem);line-height:.95;color:#ffe0a4;margin:.35rem 0 1rem}.rp-footer__date,.rp-footer__hash{color:var(--rp-gold-soft)}.rp-footer__line{opacity:.8}.rp-gallery__grid{position:relative;z-index:2}.rp-gallery__item{border:0;background:none}.rp-gallery__item img{display:block}.rp-countdown__inner{position:relative;z-index:2}.rp-countdown__bigdate{color:var(--rp-gold-soft);text-align:center}.rp-couple__card{min-height:0}@media(max-width:767px){.rp-live__card{padding:1.5rem .9rem}}
+
+
+/* ==========================================================
+   V24 — photo visibility
+   The section photos were loading but sat under near-opaque veils
+   (hero: 0.42 photo under a 0.90–0.96 gradient), so every background
+   rendered as flat purple. Lift the photos and thin the overlays to
+   the point where text still passes contrast.
+   ========================================================== */
+.rp-entry__photo{opacity:.56}
+.rp-entry__veil{background:
+  linear-gradient(180deg,rgba(24,10,32,.5),rgba(17,8,28,.8)),
+  radial-gradient(circle at 50% 22%,rgba(236,188,101,.2),transparent 44%)}
+
+.rp-hero__photo{opacity:.76}
+.rp-hero__bg{background:
+  radial-gradient(circle at 50% 30%,rgba(217,163,75,.16) 0%,transparent 52%),
+  linear-gradient(180deg,rgba(41,15,44,.34),rgba(16,8,27,.5))}
+.rp-hero__veil{background:linear-gradient(180deg,rgba(22,9,31,.2) 0%,rgba(12,7,20,.34) 36%,rgba(12,7,20,.62) 62%,rgba(12,7,20,.8) 100%)}
+
+.rp-events__photo{opacity:.52}
+.rp-events__veil{background:linear-gradient(180deg,rgba(24,10,33,.74),rgba(14,8,24,.82))}
+
+.rp-footer__photo{opacity:.46}
+.rp-footer::after{background:linear-gradient(180deg,rgba(18,9,31,.55),rgba(14,8,24,.86))}
+
+/* A photo that fails to load must not leave an empty frame behind. */
+.royal-premium img[data-failed="true"]{display:none!important}
+
+/* ==========================================================
+   V24 — couple names
+   The script face has wide swashes, so a 0.5rem gap let the "&"
+   collide with the end of the first name ("Sidharth&"). Give the
+   ampersand real breathing room and align it optically.
+   ========================================================== */
+.rp-hero__names{gap:clamp(.7rem,2.6vw,1.5rem);align-items:center}
+.rp-hero__name{padding:0 .06em}
+.rp-hero__amp{margin-bottom:0;align-self:center;opacity:.9}
+.rp-hero__names--long{gap:clamp(.55rem,2.2vw,1.2rem)}
+.rp-hero__names--long .rp-hero__amp{margin-bottom:0}
+.rp-hero__names--col{gap:clamp(.1rem,1vw,.35rem)}
+.rp-hero__names--col .rp-hero__amp{margin:.1rem 0}
+.rp-entry__names{padding:0 .12em}
+.rp-entry__amp{padding:0 .18em;display:inline-block}
+.rp-footer__names{padding:0 .1em}
+.rp-footer__amp{padding:0 .22em;display:inline-block}
+
+
+/* ==========================================================
+   V25 — gallery showed only part of each photo
+   Every tile was locked to `aspect-ratio:4/5` with `object-fit:cover`,
+   so any photo that was not 4:5 got its edges cropped away: measured
+   30–55% visible for landscape shots on the 6-column desktop grid.
+   Lay the gallery out in masonry columns instead and let each photo
+   keep its own shape, so nothing is cut off.
+   ========================================================== */
+.rp-gallery__grid{display:block;grid-template-columns:none;columns:2;column-gap:.66rem}
+.rp-gallery__item{display:block;width:100%;margin:0 0 .66rem;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid}
+/* Undo the desktop spans — they belong to the old fixed grid. */
+.rp-gallery__item:nth-child(1),.rp-gallery__item:nth-child(4){grid-column:auto;grid-row:auto}
+/* 4/5 only reserves space until the real shape is known; app.js then sets
+   the photo's own ratio inline, after which `cover` crops nothing. */
+.rp-gallery__image{width:100%;height:auto;aspect-ratio:4/5;object-fit:cover}
+@media(min-width:768px){.rp-gallery__grid{columns:3}}
+@media(min-width:1080px){.rp-gallery__grid{columns:4}}
+
+
+/* ==========================================================
+   V26 — names clipped on narrow phones
+   "Pavan & Bhargavi" reached x=392 in a 393px viewport, and the
+   swash on the final "i" overhung that into .rp-hero's overflow:hidden,
+   so the letter vanished. app.js now measures the rendered names and
+   sets --rp-name-scale when they do not fit; these rules apply it.
+   ========================================================== */
+.rp-hero__names{--rp-name-size:clamp(3.1rem,15vw,6rem);--rp-name-scale:1}
+.rp-hero__names--long{--rp-name-size:clamp(2.45rem,10.4vw,6.5rem)}
+.rp-hero__names--col{--rp-name-size:clamp(2.5rem,10.5vw,6rem)}
+.rp-hero__names .rp-hero__name,
+.rp-hero__names--long .rp-hero__name,
+.rp-hero__names--col .rp-hero__name{font-size:calc(var(--rp-name-size)*var(--rp-name-scale))}
+.rp-entry__names{--rp-name-scale:1;font-size:calc(clamp(2.8rem,12vw,4.3rem)*var(--rp-name-scale))}
+.rp-footer__names{--rp-name-scale:1;font-size:calc(clamp(3rem,12vw,5rem)*var(--rp-name-scale))}
+
+/* ==========================================================
+   V26 — mobile performance
+   The page was decoding ~148MB of bitmaps up front (gallery photos
+   arrive up to 2560px wide to be shown at 178px) while 113 tweens ran,
+   which is what made iPhones stutter. Images below the fold now load
+   lazily, and the petal rain is thinned on small screens.
+   ========================================================== */
+@media (max-width:767px){
+  /* One compositing hint is enough; 50 promoted layers is not. */
+  .rp-rain__petal{will-change:auto}
+}
+
+
+/* ==========================================================
+   V27 — a long pair of names has to break between the names
+   The entry and footer rendered the pair as one text run, so it wrapped
+   wherever it happened to fit: "Mugonda Pavan Kumar & Palagummi" /
+   "Bhargavi". Each name is its own element now, and app.js adds
+   --stacked when they cannot share a line, giving one name per line
+   with the ampersand centred between them.
+   ========================================================== */
+.rp-entry__names,
+.rp-footer__names{
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:baseline;
+  justify-content:center;
+  gap:.28em;
+}
+.rp-entry__name,
+.rp-footer__name{white-space:nowrap}
+.rp-entry__amp,
+.rp-footer__amp{padding:0;flex:0 0 auto}
+
+.rp-entry__names--stacked,
+.rp-footer__names--stacked{
+  flex-direction:column;
+  align-items:center;
+  gap:0;
+  line-height:1.04;
+}
+/* Centred on its own line, and a touch smaller so the names lead. */
+.rp-entry__names--stacked .rp-entry__amp,
+.rp-footer__names--stacked .rp-footer__amp{
+  font-size:.52em;
+  line-height:1;
+  margin:.12em 0;
+  opacity:.85;
+}
+
+/* .rp-hero and .rp-footer are grid containers, and a grid item defaults to
+   min-width:auto — it refuses to shrink below its content. A long unbreakable
+   name therefore stretched the content box to 778px inside a 393px viewport;
+   overflow:hidden hid the damage, so the names were clipped and off-centre,
+   and fitNames() was measuring against that inflated width. Let them shrink. */
+.rp-hero__content,
+.rp-footer__content,
+.rp-entry__content{min-width:0;max-width:100%}
+.rp-hero__names,
+.rp-entry__names,
+.rp-footer__names{min-width:0;max-width:100%}
+.rp-hero__name{min-width:0}

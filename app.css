@@ -93,3 +93,54 @@ html,body{margin:0;padding:0;background:#12091f;color:#f7ecd5;overflow-x:hidden}
   /* One compositing hint is enough; 50 promoted layers is not. */
   .rp-rain__petal{will-change:auto}
 }
+
+
+/* ==========================================================
+   V27 — a long pair of names has to break between the names
+   The entry and footer rendered the pair as one text run, so it wrapped
+   wherever it happened to fit: "Mugonda Pavan Kumar & Palagummi" /
+   "Bhargavi". Each name is its own element now, and app.js adds
+   --stacked when they cannot share a line, giving one name per line
+   with the ampersand centred between them.
+   ========================================================== */
+.rp-entry__names,
+.rp-footer__names{
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:baseline;
+  justify-content:center;
+  gap:.28em;
+}
+.rp-entry__name,
+.rp-footer__name{white-space:nowrap}
+.rp-entry__amp,
+.rp-footer__amp{padding:0;flex:0 0 auto}
+
+.rp-entry__names--stacked,
+.rp-footer__names--stacked{
+  flex-direction:column;
+  align-items:center;
+  gap:0;
+  line-height:1.04;
+}
+/* Centred on its own line, and a touch smaller so the names lead. */
+.rp-entry__names--stacked .rp-entry__amp,
+.rp-footer__names--stacked .rp-footer__amp{
+  font-size:.52em;
+  line-height:1;
+  margin:.12em 0;
+  opacity:.85;
+}
+
+/* .rp-hero and .rp-footer are grid containers, and a grid item defaults to
+   min-width:auto — it refuses to shrink below its content. A long unbreakable
+   name therefore stretched the content box to 778px inside a 393px viewport;
+   overflow:hidden hid the damage, so the names were clipped and off-centre,
+   and fitNames() was measuring against that inflated width. Let them shrink. */
+.rp-hero__content,
+.rp-footer__content,
+.rp-entry__content{min-width:0;max-width:100%}
+.rp-hero__names,
+.rp-entry__names,
+.rp-footer__names{min-width:0;max-width:100%}
+.rp-hero__name{min-width:0}

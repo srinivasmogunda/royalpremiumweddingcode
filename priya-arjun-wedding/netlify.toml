@@ -1,0 +1,21 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Keep the dynamic API endpoints on Netlify Functions.
+# Static files (index.html, admin.html, CSS, JS, assets) are served normally.
+
+# The app's own code and data must revalidate, or an admin edit never reaches
+# a browser that has already visited. Fonts and SVG assets are stable.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    cache-control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    cache-control = "public, max-age=31536000, immutable"
