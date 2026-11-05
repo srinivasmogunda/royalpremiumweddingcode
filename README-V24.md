@@ -135,3 +135,71 @@ tablet and desktop, whatever its shape, and the columns stay gap-free.
 
 The lightbox was already correct (`object-fit: contain`) and still opens the
 right photo.
+
+---
+
+## Addendum 3 — clipped names and phone lag
+
+### The last letter of a name was cut off
+
+Reported on an iPhone with "Pavan & Bhargavi": the final "i" was missing.
+Measured at 393px, the names row ended at x=392 in a 393px viewport — and
+Great Vibes overhangs its glyph boxes, so the swash on that last letter fell
+outside `.rp-hero`'s `overflow:hidden` and disappeared.
+
+The cause was my own `nameFitClass()` from the previous round: it chose a size
+from **letter counts**. "Pavan"(5) + "Bhargavi"(8) = 13, under every threshold,
+so nothing shrank. Letter counts cannot predict width in a script face, where
+a swashed "B" is several times the width of an "i".
+
+`fitNames()` now measures the rendered names against the container, leaves
+18px each side for the swashes, and scales `--rp-name-scale` down smoothly
+until they fit — stacking the two names only when side-by-side would have to
+go below 72%. It runs after `document.fonts.ready` (the first measurement
+would otherwise be of the fallback face), and again on resize and orientation
+change. The entry and footer names are scaled the same way.
+
+Checked across phone widths with the reported pair, nothing clipped:
+
+| Viewport | Layout | Name size |
+|---|---|---|
+| 320px | stacked | 41px |
+| 360px | side by side | 45px |
+| 375px | side by side | 47px |
+| 393px | side by side | 51px |
+| 430px | side by side | 57px |
+
+Long pairs such as "Bhanu Prakash & Vijaya Lakshmi" and
+"Venkateswarlu & Satyanarayanamma" stack automatically and also stay clear of
+the edges.
+
+### The page stuttered on phones
+
+Measured on the stock page: **~147MB of decoded image memory** (36.7
+megapixels across 31 images) with **113 tweens** running. Gallery photos were
+arriving up to 2560px wide to be displayed at 178px — a 11.5× waste in both
+download and memory. That is far past what an iPhone keeps resident, so Safari
+thrashes and drops frames.
+
+| | Before | After |
+|---|---|---|
+| Decoded image memory at first paint | 147MB | **23MB** |
+| Megapixels at first paint | 36.7 | **5.8** |
+| Rain petals on phones | 50 | **18** |
+| Bloom-burst petals on phones | 26 | **14** |
+
+- Gallery photos and the events/footer backgrounds now use `loading="lazy"`
+  and `decoding="async"`; 123MB of image memory is deferred until the guest
+  actually scrolls to it. Verified cold-cache: nothing below the fold is
+  fetched until it is approached.
+- Entry and hero photos stay eager with `fetchpriority="high"` — they are the
+  first thing anyone sees.
+- The petal rain and bloom burst are thinned on small screens, on devices
+  reporting 4 cores or fewer, and when Data Saver is on.
+- The hero photo's scroll parallax and the mandala rotation are skipped on
+  phones. Rescaling a full-screen photo on every scroll frame was the single
+  most expensive thing on the page there; the content fade is kept.
+
+Note: photos uploaded through the editor are already resized to 1920px by the
+V24 upload fix. The oversized ones measured here came from hosted URLs set
+before that, so re-uploading those through the editor will shrink them further.

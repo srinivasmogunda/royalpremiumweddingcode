@@ -131,7 +131,7 @@ function renderShell(){
 
 function renderEntry(c){
   return `<div class="rp-entry" id="rp-entry">
-    ${c.entryBackground!==null ? `<img class="rp-entry__photo" src="${esc(c.entryBackground || c.coverPhoto || remoteAsset('ext-couple-hero.jpg'))}" alt="">` : ''}
+    ${c.entryBackground!==null ? `<img class="rp-entry__photo" src="${esc(c.entryBackground || c.coverPhoto || remoteAsset('ext-couple-hero.jpg'))}" alt="" decoding="async" fetchpriority="high">` : ''}
     <div class="rp-entry__veil"></div>
     <img class="rp-entry__jali" src="${asset('jali-pattern.svg')}" alt="">
     <div class="rp-entry__glow"></div>
@@ -146,19 +146,65 @@ function renderEntry(c){
   </div>`;
 }
 
+// A first guess only, so the names do not visibly reflow. fitNames() measures
+// the real thing afterwards and corrects it — letter counts cannot predict
+// width in a script face, where a swashed "B" is several times an "i".
 function nameFitClass(first,second){
   const longest=Math.max(first.length,second.length);
   const combined=first.length+second.length;
-  if(longest>12 || combined>22) return ' rp-hero__names--col';
-  if(longest>8 || combined>15) return ' rp-hero__names--long';
+  if(longest>11 || combined>19) return ' rp-hero__names--col';
+  if(longest>7 || combined>12) return ' rp-hero__names--long';
   return '';
+}
+
+// Great Vibes overhangs its glyph boxes, and .rp-hero has overflow:hidden, so
+// a name that "just fits" by layout width still loses the tail of its last
+// letter. Leave this much room on each side.
+const NAME_SWASH_ROOM=18;
+
+function fitNames(){
+  const hero=document.querySelector('.rp-hero__names');
+  const heroContent=document.querySelector('.rp-hero__content');
+  if(hero && heroContent){
+    const room=()=>heroContent.clientWidth-NAME_SWASH_ROOM*2;
+    const widest=()=>Math.max(hero.scrollWidth,...[...hero.children].map(c=>c.scrollWidth));
+    // Shrink smoothly rather than stepping between preset sizes, so the names
+    // stay as large as they can while still clearing the edges. Only stack
+    // them once side-by-side would have to get genuinely small.
+    const shrinkToFit=(floor)=>{
+      let scale=1;
+      hero.style.removeProperty('--rp-name-scale');
+      while(scale>floor && widest()>room()){
+        scale-=0.02;
+        hero.style.setProperty('--rp-name-scale',scale.toFixed(2));
+      }
+      return widest()<=room();
+    };
+    hero.className='rp-hero__names';
+    if(!shrinkToFit(0.72)){
+      hero.className='rp-hero__names rp-hero__names--col';
+      shrinkToFit(0.5);
+    }
+  }
+  // The entry and footer render the pair as one line; scale those to fit too.
+  for(const sel of ['.rp-entry__names','.rp-footer__names']){
+    const el=document.querySelector(sel);
+    if(!el || !el.parentElement) continue;
+    el.style.removeProperty('--rp-name-scale');
+    let scale=1;
+    const room=el.parentElement.clientWidth-NAME_SWASH_ROOM*2;
+    while(scale>0.5 && el.scrollWidth>room){
+      scale-=0.04;
+      el.style.setProperty('--rp-name-scale',scale.toFixed(2));
+    }
+  }
 }
 
 function renderHero(c){
   const first=c.partnerOne||'Sidharth', second=c.partnerTwo||'Kiara';
   const chars=(s,p)=>[...s].map((ch,i)=>`<span class="rp-hero__char" data-char="${p}-${i}">${ch===' ' ? '&nbsp;' : esc(ch)}</span>`).join('');
   return `<section class="rp-hero rp-section" id="hero">
-    ${c.heroBackground ? `<img class="rp-hero__photo" src="${esc(c.heroBackground)}" alt="">` : ''}
+    ${c.heroBackground ? `<img class="rp-hero__photo" src="${esc(c.heroBackground)}" alt="" decoding="async" fetchpriority="high">` : ''}
     <div class="rp-hero__bg"></div><div class="rp-hero__veil"></div>
     <div class="rp-hero__mandala-bg"><img class="rp-hero__mandala-img" src="${asset('mandala-bloom.svg')}" alt=""></div>
     <img class="rp-hero__jali" src="${asset('jali-pattern.svg')}" alt="">
@@ -211,7 +257,7 @@ function renderCountdown(c){
 
 function renderEvents(c){
   const meta=(e)=>{const t=(e.type||'').toLowerCase(),n=(e.name||'').toLowerCase();if(/haldi/.test(t+n))return ['Purity & Joy','A joyful turmeric ceremony with blessings from elders and playful family rituals.'];if(/mehndi|mehendi/.test(t+n))return ['Art & Tradition','Intricate henna, dhol beats, and colorful outfits that bring both families together.'];if(/sangeet/.test(t+n))return ['Music & Dance','An evening of performances, laughter, and stories celebrating both families.'];if(/wedding/.test(t+n))return ['Sacred Vows','Sacred mantras, varmala, and saat phere — the beginning of a new journey.'];if(/reception/.test(t+n))return ['Grand Celebration','A grand evening of dining, dancing, and celebrating the newlyweds.'];return ['Celebration',''];};
-  return `<section class="rp-events rp-section" id="events"><img src="${esc(c.eventsBackground||c.coverPhoto||remoteAsset('ext-couple-hero.jpg'))}" class="rp-events__photo" alt=""><div class="rp-events__veil"></div><div class="rp-container">
+  return `<section class="rp-events rp-section" id="events"><img src="${esc(c.eventsBackground||c.coverPhoto||remoteAsset('ext-couple-hero.jpg'))}" class="rp-events__photo" alt="" loading="lazy" decoding="async"><div class="rp-events__veil"></div><div class="rp-container">
     <p class="rp-events__pretitle rp-font-label">Wedding Events</p><h2 class="rp-events__title rp-font-heading">Celebration Schedule</h2><p class="rp-events__subtitle rp-font-serif">Every ritual, every moment — beautifully planned for family and friends.</p><img src="${asset('lotus-divider.svg')}" class="rp-divider" alt="">
     <div class="rp-events__grid">${(c.events||[]).filter(e=>e&&e.name).map((e,i)=>{const [badge,desc]=meta(e);return `<article class="rp-events__card"><div class="rp-events__card-header"><div class="rp-events__icon-wrap"><span class="rp-events__icon" style="font-size:28px">${iconFor(e.type,e.name)}</span></div><p class="rp-events__badge rp-font-label">${badge}</p></div><h3 class="rp-events__name rp-font-heading">${esc(e.name)}</h3>${desc?`<p class="rp-events__ritual-desc rp-font-serif">${desc}</p>`:''}<p class="rp-events__meta rp-font-ui">${esc([e.date,e.time].filter(Boolean).join(' · '))}</p>${e.venue?`<p class="rp-events__venue rp-font-ui">${esc(e.venue)}</p>`:''}${e.mapLink?`<a href="${esc(e.mapLink)}" target="_blank" rel="noopener" class="rp-events__link rp-font-label">Get Directions →</a>`:''}</article>`}).join('')}</div>
   </div></section>`;
@@ -221,7 +267,7 @@ function renderGallery(c){
   const photos=(c.gallery||[]).filter(Boolean);
   return `<section class="rp-gallery rp-section" id="gallery"><img src="${asset('jali-pattern.svg')}" class="rp-gallery__jali" alt=""><div class="rp-container">
     <p class="rp-gallery__pretitle rp-font-label">Captured Chapters</p><h2 class="rp-gallery__title rp-font-heading">Memories in Bloom</h2><p class="rp-gallery__subtitle rp-font-serif">A glimpse of moments leading to our celebration.</p><img src="${asset('ornate-divider.svg')}" class="rp-gallery__divider" alt="">
-    <div class="rp-gallery__grid">${photos.map((src,i)=>`<button class="rp-gallery__item" type="button" data-gallery-index="${i}"><img src="${esc(src)}" class="rp-gallery__image" alt="Gallery photo ${i+1}"></button>`).join('')}</div>
+    <div class="rp-gallery__grid">${photos.map((src,i)=>`<button class="rp-gallery__item" type="button" data-gallery-index="${i}"><img src="${esc(src)}" class="rp-gallery__image" alt="Gallery photo ${i+1}" loading="lazy" decoding="async"></button>`).join('')}</div>
   </div></section>`;
 }
 
@@ -356,14 +402,23 @@ function renderShare(c){
 }
 
 function renderFooter(c){
-  return `<footer class="rp-footer rp-section" id="footer"><img src="${esc(c.footerBackground||c.coverPhoto||remoteAsset('ext-couple-hero.jpg'))}" class="rp-footer__photo" alt=""><div class="rp-footer__content rp-container"><img src="${asset('ornate-divider.svg')}" class="rp-footer__divider" alt=""><p class="rp-footer__label rp-font-label">The Beginning of Forever</p><div class="rp-footer__names rp-font-script">${esc(c.partnerOne)}<span class="rp-footer__amp">&amp;</span>${esc(c.partnerTwo)}</div><div class="rp-footer__date rp-font-label">${esc(fmtDate(c.weddingDate,c.displayDate))} · ${esc(c.weddingTime||'')}</div><p class="rp-footer__hash rp-font-serif">${esc(c.hashtag||'')}</p><p class="rp-footer__line rp-font-serif">With love, laughter, and blessings.</p></div></footer>`;
+  return `<footer class="rp-footer rp-section" id="footer"><img src="${esc(c.footerBackground||c.coverPhoto||remoteAsset('ext-couple-hero.jpg'))}" class="rp-footer__photo" alt="" loading="lazy" decoding="async"><div class="rp-footer__content rp-container"><img src="${asset('ornate-divider.svg')}" class="rp-footer__divider" alt=""><p class="rp-footer__label rp-font-label">The Beginning of Forever</p><div class="rp-footer__names rp-font-script">${esc(c.partnerOne)}<span class="rp-footer__amp">&amp;</span>${esc(c.partnerTwo)}</div><div class="rp-footer__date rp-font-label">${esc(fmtDate(c.weddingDate,c.displayDate))} · ${esc(c.weddingTime||'')}</div><p class="rp-footer__hash rp-font-serif">${esc(c.hashtag||'')}</p><p class="rp-footer__line rp-font-serif">With love, laughter, and blessings.</p></div></footer>`;
+}
+
+// Phones have far less GPU headroom than the desktop this was tuned on, and
+// every petal is its own promoted layer running an endless tween.
+function isSmallScreen(){ return window.matchMedia?.('(max-width: 767px)').matches; }
+function isLowPower(){
+  return isSmallScreen()
+    || (navigator.hardwareConcurrency||8)<=4
+    || navigator.connection?.saveData===true;
 }
 
 function firePetalBurst(){
   const layer=document.querySelector('#rp-bloom-petals');
   if(!layer)return;
   layer.innerHTML='';
-  const count=26;
+  const count=isLowPower()?14:26;
   for(let i=0;i<count;i++){
     const el=document.createElement('div');
     el.className='rp-bloom-petal';
@@ -403,7 +458,7 @@ function startGlobalFlowerRain(){
   if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
   layer.dataset.started='true';
   layer.innerHTML='';
-  const count=50;
+  const count=isLowPower()?18:50;
   const random=gsap.utils.random;
   const petals=[];
   for(let i=0;i<count;i++){
@@ -492,14 +547,17 @@ function playMainIntro(){
   const main=document.querySelector('#rp-main');
   main.classList.add('is-visible');
   primeMainIntro(); // harmless if handleOpen already primed; required when it did not
+  const light=isLowPower();
   const tl=gsap.timeline({defaults:{ease:'power3.out'},onComplete(){
     // Only hand the hero photo to the scroll parallax once the opening zoom has
-    // finished, so the two never animate `scale` at the same time.
-    gsap.to('.rp-hero__photo',{yPercent:20,scale:1.08,scrollTrigger:{trigger:'#hero',start:'top top',end:'bottom top',scrub:1.2},ease:'none'});
+    // finished, so the two never animate `scale` at the same time. Skipped on
+    // phones: rescaling a full-screen photo every scroll frame is the single
+    // most expensive thing on the page there.
+    if(!light) gsap.to('.rp-hero__photo',{yPercent:20,scale:1.08,scrollTrigger:{trigger:'#hero',start:'top top',end:'bottom top',scrub:1.2},ease:'none'});
   }});
   tl.to('.rp-hero__photo',{scale:1,duration:2,ease:'power2.out'},0);
   HERO_INTRO.forEach(step=>tl.to(step.target,step.to,step.at));
-  gsap.to('.rp-hero__mandala-bg',{rotate:30,scrollTrigger:{trigger:'#hero',start:'top top',end:'bottom top',scrub:2},ease:'none'});
+  if(!light) gsap.to('.rp-hero__mandala-bg',{rotate:30,scrollTrigger:{trigger:'#hero',start:'top top',end:'bottom top',scrub:2},ease:'none'});
   gsap.to('.rp-hero__content',{y:-60,opacity:.3,scrollTrigger:{trigger:'#hero',start:'30% top',end:'bottom top',scrub:1},ease:'none'});
   ScrollTrigger.refresh();
   if(!state.scrollReady){state.scrollReady=true; initScrollAnimations();}
@@ -753,8 +811,17 @@ function watchPhotos(){
 async function start(){
   state.config=await loadConfig(); renderShell(); watchPhotos(); initMusic(state.config); animateEntry(); setInterval(countdown,1000); countdown();
   initInteractions();
+  fitNames();
+  // The script face loads with font-display:swap, so the first measurement is
+  // of the fallback. Measure again once the real font is in.
+  document.fonts?.ready.then(fitNames).catch(()=>{});
   // keep root ready for browser resize
-  window.addEventListener('resize',()=>ScrollTrigger.refresh());
+  let resizeTimer=null;
+  window.addEventListener('resize',()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(()=>{fitNames();ScrollTrigger.refresh();},150);
+  });
+  window.addEventListener('orientationchange',()=>setTimeout(fitNames,250));
 }
 start().catch((error)=>{
   console.error('Wedding invitation failed to initialize:', error);
