@@ -1,4 +1,4 @@
-# Priya & Arjun Wedding — v18
+# Pavan & Bhargavi Wedding — v18
 
 ## v18 fixes
 - Wedding date in Admin is now correctly loaded into the `datetime-local` input.
