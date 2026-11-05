@@ -64,3 +64,32 @@ html,body{margin:0;padding:0;background:#12091f;color:#f7ecd5;overflow-x:hidden}
 .rp-gallery__image{width:100%;height:auto;aspect-ratio:4/5;object-fit:cover}
 @media(min-width:768px){.rp-gallery__grid{columns:3}}
 @media(min-width:1080px){.rp-gallery__grid{columns:4}}
+
+
+/* ==========================================================
+   V26 — names clipped on narrow phones
+   "Pavan & Bhargavi" reached x=392 in a 393px viewport, and the
+   swash on the final "i" overhung that into .rp-hero's overflow:hidden,
+   so the letter vanished. app.js now measures the rendered names and
+   sets --rp-name-scale when they do not fit; these rules apply it.
+   ========================================================== */
+.rp-hero__names{--rp-name-size:clamp(3.1rem,15vw,6rem);--rp-name-scale:1}
+.rp-hero__names--long{--rp-name-size:clamp(2.45rem,10.4vw,6.5rem)}
+.rp-hero__names--col{--rp-name-size:clamp(2.5rem,10.5vw,6rem)}
+.rp-hero__names .rp-hero__name,
+.rp-hero__names--long .rp-hero__name,
+.rp-hero__names--col .rp-hero__name{font-size:calc(var(--rp-name-size)*var(--rp-name-scale))}
+.rp-entry__names{--rp-name-scale:1;font-size:calc(clamp(2.8rem,12vw,4.3rem)*var(--rp-name-scale))}
+.rp-footer__names{--rp-name-scale:1;font-size:calc(clamp(3rem,12vw,5rem)*var(--rp-name-scale))}
+
+/* ==========================================================
+   V26 — mobile performance
+   The page was decoding ~148MB of bitmaps up front (gallery photos
+   arrive up to 2560px wide to be shown at 178px) while 113 tweens ran,
+   which is what made iPhones stutter. Images below the fold now load
+   lazily, and the petal rain is thinned on small screens.
+   ========================================================== */
+@media (max-width:767px){
+  /* One compositing hint is enough; 50 promoted layers is not. */
+  .rp-rain__petal{will-change:auto}
+}
