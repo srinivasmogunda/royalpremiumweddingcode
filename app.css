@@ -144,3 +144,35 @@ html,body{margin:0;padding:0;background:#12091f;color:#f7ecd5;overflow-x:hidden}
 .rp-entry__names,
 .rp-footer__names{min-width:0;max-width:100%}
 .rp-hero__name{min-width:0}
+
+
+/* ==========================================================
+   V28 — the sound button sat under the "Powered by Netlify" badge
+   On Netlify's free tier the host injects a badge: a fixed iframe,
+   197x64px, flush to the bottom-right corner at z-index 2147483645.
+   Nothing on the page can be stacked above that, and the sound button
+   lived in exactly that corner. app.js measures the badge when it
+   appears and sets --rp-badge-clearance; the button rises by that much.
+   With no badge (local server, other hosts, paid plans) it is 0 and the
+   button stays where it always was.
+   ========================================================== */
+.rp-music{
+  bottom:calc(0.95rem + var(--rp-badge-clearance, 0px));
+  transition:bottom .25s ease;
+}
+@media (min-width:768px){
+  .rp-music{bottom:calc(1.35rem + var(--rp-badge-clearance, 0px))}
+}
+
+/* Raising the button put it into "Scroll to Explore" on the hero at rest
+   (button 261-378px, label 126-267px, same row). Extra bottom padding does
+   not help: .rp-hero has min-height:100svh with its padding added on top, so
+   it is 1012px tall on an 852px screen and its content is centred in that
+   taller box. While the badge is there, the usable screen is what is left
+   above the badge and the button stacked on it — about two clearances —
+   so size the hero to that. Measured against the live badge, the label then
+   clears the button by 32px (360x800) to 75px (430x932), and the content
+   lands on the screen's true centre, where before it sat ~64px low. A
+   667px-tall screen (iPhone SE) is too short for the hero plus the badge and
+   button, so there the button rests over the label. No badge, no change. */
+.rp-hero{min-height:calc(100svh - 2 * var(--rp-badge-clearance, 0px))}

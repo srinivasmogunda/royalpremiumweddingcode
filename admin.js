@@ -30,7 +30,46 @@ function fill(){
   renderEvents();renderGallery();renderVisibility();previewMusic();previewBackgrounds();
 }
 function renderVisibility(){const root=$('#visibility-editor');root.replaceChildren(...visibilityKeys.map(key=>{const l=document.createElement('label');l.className='visibility-row';const c=document.createElement('input');c.type='checkbox';c.checked=current.sectionVisibility?.[key]!==false;c.dataset.visibility=key;l.append(c,document.createTextNode(visibilityLabels[key]));return l}))}
-function renderEvents(){const root=$('#events-editor');root.replaceChildren(...(current.events||[]).map((event,index)=>{const node=$('#event-template').content.firstElementChild.cloneNode(true);node.querySelector('legend').textContent=`Event ${index+1}`;node.querySelectorAll('[data-key]').forEach(input=>input.value=event[input.dataset.key]||'');node.querySelector('.remove-event').onclick=()=>{current.events.splice(index,1);renderEvents();status('Unsaved changes')};node.querySelector('.event-file').onchange=e=>handleFiles(e.target,`Event ${index+1} image`,async file=>{event.image=await upload(file);renderEvents()});return node}))}
+// Copy what is typed in the editor back into current.events before the list is
+// re-rendered. Unlike readEvents() it keeps unnamed rows, so the indices the
+// buttons act on still line up — and edits not yet saved are not thrown away
+// when an event is removed or moved.
+function syncEvents(){
+  document.querySelectorAll('.event-editor').forEach((node,index)=>{
+    const event=current.events[index];
+    if(!event) return;
+    node.querySelectorAll('[data-key]').forEach(input=>event[input.dataset.key]=input.value.trim());
+  });
+}
+// The invitation lists events in exactly this order, so the editor has to be
+// able to change it; before, the only way was to delete and re-enter events.
+function moveEvent(index,delta){
+  syncEvents();
+  const target=index+delta;
+  if(target<0 || target>=current.events.length) return;
+  [current.events[index],current.events[target]]=[current.events[target],current.events[index]];
+  renderEvents();
+  status('Event order changed — save changes');
+  // Keep the moved event in view rather than leaving it scrolled off.
+  document.querySelectorAll('.event-editor')[target]?.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+function renderEvents(){
+  const root=$('#events-editor');
+  const events=current.events||[];
+  root.replaceChildren(...events.map((event,index)=>{
+    const node=$('#event-template').content.firstElementChild.cloneNode(true);
+    node.querySelector('legend').textContent=`Event ${index+1}`;
+    node.querySelectorAll('[data-key]').forEach(input=>input.value=event[input.dataset.key]||'');
+    const up=node.querySelector('.move-up'), down=node.querySelector('.move-down');
+    up.disabled=index===0;
+    down.disabled=index===events.length-1;
+    up.onclick=()=>moveEvent(index,-1);
+    down.onclick=()=>moveEvent(index,1);
+    node.querySelector('.remove-event').onclick=()=>{syncEvents();current.events.splice(index,1);renderEvents();status('Unsaved changes')};
+    node.querySelector('.event-file').onchange=e=>handleFiles(e.target,`Event ${index+1} image`,async file=>{syncEvents();event.image=await upload(file);renderEvents()});
+    return node;
+  }));
+}
 function readEvents(){return [...document.querySelectorAll('.event-editor')].map((node,index)=>{const base=current.events[index]||{};node.querySelectorAll('[data-key]').forEach(input=>base[input.dataset.key]=input.value.trim());return base}).filter(x=>x.name)}
 function renderGallery(){const root=$('#gallery-editor');root.replaceChildren(...(current.gallery||[]).map((image,index)=>{const item=document.createElement('div');item.className='gallery-thumb';const img=document.createElement('img');img.src=image;img.alt=`Gallery image ${index+1}`;const b=document.createElement('button');b.type='button';b.textContent='×';b.onclick=()=>{current.gallery.splice(index,1);renderGallery();status('Unsaved changes')};item.append(img,b);return item}))}
 // Phone photos run 3–12 MB, and the hosted upload endpoint rejects request
