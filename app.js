@@ -862,9 +862,48 @@ function watchPhotos(){
   window.addEventListener('load',refresh,{once:true});
 }
 
+// Netlify's free tier injects a "Powered by Netlify" badge as a fixed iframe in
+// the bottom-right corner, stacked above everything (z-index ~2^31), so the
+// page cannot draw over it. Lift the sound button clear of it instead. The
+// badge is added by the host after the page loads, may shrink to a mini pill,
+// and expands into a 366x334 card when tapped; follow the collapsed size only,
+// so the button does not jump whenever a guest opens that card.
+const BADGE_COLLAPSED_MAX=100;
+function keepClearOfHostBadge(){
+  // No sound button (music hidden in the editor): nothing needs moving.
+  if(!document.querySelector('#music-btn')) return;
+  // Set on the root so both the button and the hero can read it.
+  const root=document.documentElement;
+  let watched=null, sizeWatch=null;
+  const apply=()=>{
+    const badge=document.querySelector('#nl-badge-frame');
+    if(badge!==watched){
+      sizeWatch?.disconnect();
+      watched=badge;
+      if(badge && 'ResizeObserver' in window){
+        sizeWatch=new ResizeObserver(apply);
+        sizeWatch.observe(badge);
+      }
+    }
+    if(!badge){ root.style.setProperty('--rp-badge-clearance','0px'); return; }
+    const s=getComputedStyle(badge), r=badge.getBoundingClientRect();
+    if(s.display==='none' || s.visibility==='hidden' || r.height===0){
+      root.style.setProperty('--rp-badge-clearance','0px');
+      return;
+    }
+    if(r.height>BADGE_COLLAPSED_MAX) return; // card is open; keep the last position
+    // Distance from the badge's top edge to the bottom of the viewport.
+    root.style.setProperty('--rp-badge-clearance',`${Math.ceil(window.innerHeight-r.top)}px`);
+  };
+  apply();
+  new MutationObserver(apply).observe(document.body,{childList:true});
+  window.addEventListener('resize',apply,{passive:true});
+}
+
 async function start(){
   state.config=await loadConfig(); renderShell(); watchPhotos(); initMusic(state.config); animateEntry(); setInterval(countdown,1000); countdown();
   initInteractions();
+  keepClearOfHostBadge();
   fitNames();
   // The script face loads with font-display:swap, so the first measurement is
   // of the fallback. Measure again once the real font is in.
